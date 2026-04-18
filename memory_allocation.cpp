@@ -2,11 +2,11 @@
  * CPSC 351 - Group Presentation: Main Memory Allocation Simulation
  * Simulates First-Fit, Best-Fit, and Worst-Fit memory allocation algorithms.
  *
- * Group Members:
- *   Rolando Perez        - Intro, memory setup, partition initialization display
- *   Leonardo Cristofaro  - First-Fit algorithm & demo
- *   Albert Tran          - Best-Fit algorithm & demo
- *   Joshua Duenas        - Worst-Fit algorithm & comparison
+ * Group Members & Responsibilities:
+ *   1. Rolando Perez       - Introduction, memory concepts, partition setup display
+ *   2. Leonardo Cristofaro - First-Fit algorithm demo
+ *   3. Albert Tran         - Best-Fit algorithm demo
+ *   4. Joshua Duenas       - Worst-Fit algorithm demo + full comparison
  *
  * Compile: g++ -o memory_allocation memory_allocation.cpp
  * Run:     ./memory_allocation
@@ -21,7 +21,8 @@
 using namespace std;
 
 // =============================================================================
-// SHARED DATA STRUCTURES & UTILITIES — Used by all group members
+// SHARED DATA STRUCTURES & UTILITIES
+// These are used by every section — do not modify unless everyone agrees.
 // =============================================================================
 
 struct Partition {
@@ -36,6 +37,7 @@ struct Process {
     int    size;
 };
 
+// Builds a fresh list of unoccupied partitions from the given sizes.
 vector<Partition> initializePartitions(const vector<int>& sizes) {
     vector<Partition> partitions;
     for (int i = 0; i < (int)sizes.size(); i++) {
@@ -49,6 +51,7 @@ vector<Partition> initializePartitions(const vector<int>& sizes) {
     return partitions;
 }
 
+// Prints the current state of every partition as a formatted table.
 void displayMemoryState(const vector<Partition>& partitions, const string& label) {
     cout << "\n  Memory State [" << label << "]\n";
     cout << "  " << setw(5)  << right << "Part"
@@ -63,7 +66,7 @@ void displayMemoryState(const vector<Partition>& partitions, const string& label
          << "  " << string(10,'-') << "\n";
 
     for (const Partition& p : partitions) {
-        int used = p.size - p.remaining;
+        int    used = p.size - p.remaining;
         string proc = p.process.empty() ? "---" : p.process;
         cout << "  " << setw(5)  << right << p.id
              << "  " << setw(6)  << right << p.size
@@ -96,42 +99,68 @@ void printResultSummary(const vector<string>& satisfied,
     }
 }
 
+// Prints internal fragmentation (waste inside used partitions) and total free space.
 void calculateFragmentation(const vector<Partition>& partitions, const string& label) {
     int internalFrag = 0, freeSpace = 0;
     for (const Partition& p : partitions) {
-        if (!p.process.empty())
-            internalFrag += p.remaining;
-        else
-            freeSpace += p.remaining;
+        if (!p.process.empty()) internalFrag += p.remaining;
+        else                    freeSpace    += p.remaining;
     }
     cout << "\n  Fragmentation Report [" << label << "]:\n";
     cout << "    Internal fragmentation (wasted space in used partitions) : "
          << internalFrag << " units\n";
     cout << "    Free space in unallocated partitions                     : "
-         << freeSpace << " units\n";
+         << freeSpace    << " units\n";
+}
+
+// Pauses output until the presenter presses Enter — use between steps during live demo.
+void pressEnterToContinue() {
+    cout << "\n  [Press ENTER to continue...]\n";
+    cin.ignore();
+    cin.get();
 }
 
 
 // =============================================================================
-// ROLANDO PEREZ — Introduction & Initialization Display
+// SECTION 1 — ROLANDO PEREZ
+// Topic: Introduction to Main Memory & Memory Partitioning
 // =============================================================================
 //
-// ROLANDO: Your section handles:
-//   1. Printing the intro/overview of memory management concepts
-//   2. Showing the initial partition layout BEFORE any allocation
-//   3. Printing the input (partition sizes and process sizes) so the audience
-//      understands what data is being fed into the simulation
+// WHAT YOU ARE RESPONSIBLE FOR PRESENTING:
 //
-// HOW TO USE IN YOUR DEMO:
-//   - Walk the audience through the printed partition table
-//   - Explain what "remaining" means (all free at start) and what "---" means
-//     (no process loaded yet)
-//   - Briefly describe each algorithm before handing off to Leonardo
+//   A) VERBAL OVERVIEW (say this before running the program):
+//      - Explain that main memory (RAM) is a shared resource. When multiple
+//        processes are running, the OS must divide memory and hand out pieces
+//        to each process — this is called memory allocation.
+//      - Define the two partition types:
+//          Fixed partitions  — block sizes decided at boot, never change.
+//                              Simple but can waste space if a process is small.
+//          Dynamic partitions — created on demand per process size.
+//                              More flexible but harder to manage.
+//      - Tell the audience this simulation uses FIXED partitions.
+//      - Briefly name all three algorithms (First-Fit, Best-Fit, Worst-Fit)
+//        and say your teammates will each run one.
+//
+//   B) RUNNING THE DEMO (select option 1 from the menu):
+//      - The program will print the partition table with all slots empty.
+//      - Point to the "Free" column — every partition shows its full size as
+//        free because nothing has been allocated yet.
+//      - Point to "Process = ---" meaning no process is loaded.
+//      - Show the process list and explain: each process needs a certain amount
+//        of memory; the algorithms decide WHICH partition gets each process.
+//      - End by saying: "Leonardo will now show how First-Fit decides."
+//
+//   WHAT TO KNOW IF ASKED A QUESTION:
+//      - Why fixed partitions? Simpler to implement and reason about for class.
+//      - What happens if a process is smaller than its partition?
+//        The leftover space is wasted — that is internal fragmentation.
+//      - What happens if no partition is large enough?
+//        The process is rejected (we will see this happen in the demos).
 //
 // =============================================================================
 
 void rolandoIntro(const vector<int>& partitionSizes, const vector<Process>& processes) {
-    printHeader("ROLANDO PEREZ - Introduction to Main Memory & Partitioning");
+    printHeader("SECTION 1 - ROLANDO PEREZ: Introduction to Main Memory & Partitioning");
 
     cout << R"(
   OVERVIEW:
@@ -139,14 +168,15 @@ void rolandoIntro(const vector<int>& partitionSizes, const vector<Process>& proc
   The OS divides memory into partitions and allocates them to processes.
 
   PARTITION TYPES:
-    Fixed   -- partition sizes are set at system startup and never change
-    Dynamic -- partitions are created on the fly as processes arrive
-               (this simulation uses fixed partitions)
+    Fixed   -- sizes are set at system startup and never change.
+               Simple to implement; may waste space (internal fragmentation).
+    Dynamic -- created on the fly to match each process's exact size.
+               More flexible; this simulation uses FIXED partitions.
 
   ALGORITHMS WE WILL COMPARE:
-    First-Fit  -- assign the FIRST partition that is large enough
-    Best-Fit   -- assign the SMALLEST partition that is large enough
-    Worst-Fit  -- assign the LARGEST partition available
+    First-Fit  -- scan from the start, pick the FIRST partition big enough
+    Best-Fit   -- scan all partitions, pick the SMALLEST one that fits
+    Worst-Fit  -- scan all partitions, pick the LARGEST one available
 )";
 
     vector<Partition> partitions = initializePartitions(partitionSizes);
@@ -163,39 +193,57 @@ void rolandoIntro(const vector<int>& partitionSizes, const vector<Process>& proc
 
     cout << R"(
   INPUT FORMAT:
-    - Partition sizes represent the fixed memory blocks available
-    - Process sizes represent how much memory each process needs
-    - A process is REJECTED if no eligible partition is large enough
+    - Partition sizes = the fixed memory blocks available in the system
+    - Process sizes   = how much memory each process requests
+    - REJECTED        = printed when no partition can fit the process
 )";
 }
 
 
 // =============================================================================
-// LEONARDO CRISTOFARO — First-Fit Algorithm
+// SECTION 2 — LEONARDO CRISTOFARO
+// Topic: First-Fit Memory Allocation
 // =============================================================================
 //
-// LEONARDO: Your section handles:
-//   1. Running the First-Fit allocation algorithm
-//   2. Printing which requests are satisfied vs rejected after each step
-//   3. Displaying memory state after each allocation
-//   4. Pointing out fragmentation forming near the front partitions
+// WHAT YOU ARE RESPONSIBLE FOR PRESENTING:
 //
-// HOW TO USE IN YOUR DEMO:
-//   - For each process explain: "First-Fit scans from partition 1 forward
-//     and picks the very first one big enough -- no further searching."
-//   - After a few allocations, point to the front partitions filling up
-//     and note that later large processes may not fit there even though
-//     total free memory exists (external fragmentation)
+//   A) VERBAL EXPLANATION (say this before running the simulation):
+//      - Explain the First-Fit strategy in plain English:
+//          "First-Fit scans the partition list from the very beginning —
+//           partition 1, then 2, then 3 — and stops the moment it finds
+//           a partition with enough free space. It places the process there
+//           without looking any further."
+//      - Why is this fast? Because it does the minimum work — as soon as a
+//        fit is found, the search ends. No need to evaluate every partition.
+//      - What is the downside? The front partitions fill up first and develop
+//        small leftover gaps. Over time these small holes near the front are
+//        too small to hold new processes — this is called fragmentation.
 //
-// TALKING POINTS:
-//   - Speed advantage: stops scanning as soon as it finds a fit
-//   - Fragmentation risk: small leftover holes accumulate at the front
+//   B) RUNNING THE DEMO (select option 2 from the menu):
+//      - As each process is allocated, narrate what the algorithm did:
+//          "P1 needs 212 units. Partition 1 only has 100 — too small.
+//           Partition 2 has 500 — that fits, so First-Fit stops here."
+//      - When a process is REJECTED, explain:
+//          "No single partition has enough remaining space, even though
+//           there may be enough total free memory spread across partitions.
+//           First-Fit cannot combine fragments — this is fragmentation."
+//      - After all processes, point to the fragmentation report and explain
+//        what internal fragmentation means: space inside a used partition
+//        that is allocated but going unused.
+//
+//   WHAT TO KNOW IF ASKED A QUESTION:
+//      - Why does First-Fit leave fragmentation at the front?
+//        Because it always starts scanning from partition 1, so the first
+//        few partitions get used most often and develop the most holes.
+//      - Is First-Fit ever better than Best-Fit?
+//        Yes — it is faster and in practice performs similarly to Best-Fit
+//        for many workloads, making it the most commonly used algorithm.
 //
 // =============================================================================
 
 bool firstFitAllocate(vector<Partition>& partitions,
                       const string& name, int size) {
-    // Scan from the beginning; pick the FIRST partition with enough space
+    // Scan from the beginning; stop at the FIRST partition with enough space.
     for (Partition& p : partitions) {
         if (p.process.empty() && p.remaining >= size) {
             p.process    = name;
@@ -208,14 +256,14 @@ bool firstFitAllocate(vector<Partition>& partitions,
 
 vector<Partition> leonardoFirstFit(const vector<int>& partitionSizes,
                                    const vector<Process>& processes) {
-    printHeader("LEONARDO CRISTOFARO - First-Fit Memory Allocation");
+    printHeader("SECTION 2 - LEONARDO CRISTOFARO: First-Fit Memory Allocation");
 
     cout << R"(
   FIRST-FIT ALGORITHM:
-    Scans memory partitions from the beginning (partition 1 onward).
+    Scans partitions from the beginning (partition 1 onward).
     Allocates the process to the FIRST partition with enough free space.
-    Fast -- stops searching as soon as a fit is found.
-    Downside -- small leftover fragments tend to pile up near the front.
+    Stops searching immediately once a fit is found -- makes it the fastest.
+    Downside: small leftover fragments accumulate near the front over time.
 )";
 
     vector<Partition> partitions = initializePartitions(partitionSizes);
@@ -223,15 +271,17 @@ vector<Partition> leonardoFirstFit(const vector<int>& partitionSizes,
 
     for (const Process& proc : processes) {
         cout << "\n  >> Allocating " << proc.name
-             << " (size=" << proc.size << ")\n";
+             << " (needs " << proc.size << " units)\n";
+        cout << "     Scanning from partition 1...\n";
 
         if (firstFitAllocate(partitions, proc.name, proc.size)) {
             satisfied.push_back(proc.name);
-            cout << "     SATISFIED -- " << proc.name << " placed using First-Fit\n";
+            cout << "     SATISFIED -- " << proc.name
+                 << " placed in first available partition (First-Fit)\n";
         } else {
             rejected.push_back(proc.name);
-            cout << "     REJECTED  -- no partition has enough space for "
-                 << proc.name << " (size=" << proc.size << ")\n";
+            cout << "     REJECTED  -- scanned all partitions, none have "
+                 << proc.size << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "First-Fit");
     }
@@ -243,39 +293,62 @@ vector<Partition> leonardoFirstFit(const vector<int>& partitionSizes,
 
 
 // =============================================================================
-// ALBERT TRAN — Best-Fit Algorithm
+// SECTION 3 — ALBERT TRAN
+// Topic: Best-Fit Memory Allocation
 // =============================================================================
 //
-// ALBERT: Your section handles:
-//   1. Running the Best-Fit allocation algorithm
-//   2. Comparing results to First-Fit using the same inputs
-//   3. Highlighting the smaller leftover fragments after each allocation
+// WHAT YOU ARE RESPONSIBLE FOR PRESENTING:
 //
-// HOW TO USE IN YOUR DEMO:
-//   - Use the SAME partition sizes and processes as Leonardo's demo
-//   - After each allocation compare the "Free" column to what First-Fit
-//     left behind -- Best-Fit leaves less wasted space per step
-//   - Point out tiny leftover fragments (remaining=1 or 2) and explain
-//     these become unusable -- the "small hole" problem
+//   A) VERBAL EXPLANATION (say this before running the simulation):
+//      - Explain the Best-Fit strategy:
+//          "Best-Fit does NOT stop at the first partition that fits.
+//           Instead it scans EVERY partition, records which ones are
+//           large enough, and then picks the one with the SMALLEST
+//           remaining space that still fits the process."
+//      - Why? The goal is to waste as little space as possible per allocation.
+//        If a process needs 200 units and we have a 210-unit partition and a
+//        500-unit partition, Best-Fit picks the 210 because it wastes only 10
+//        instead of 300.
+//      - What is the downside? Two things:
+//          1. Slower — must always scan every partition.
+//          2. Tiny leftover fragments — the "small hole" problem. After many
+//             allocations, you are left with lots of 5-, 10-, 20-unit holes
+//             that are too small for any real process.
 //
-// TALKING POINTS:
-//   - Less wasted space per allocation than First-Fit
-//   - Slower -- must scan ALL partitions every time
-//   - Creates many tiny leftover fragments that are too small to reuse
+//   B) RUNNING THE DEMO (select option 3 from the menu):
+//      - Use the SAME partition sizes and processes as Leonardo used.
+//        This allows a direct, fair comparison.
+//      - As each process is allocated, narrate the decision:
+//          "P1 needs 212 units. Partitions large enough are: 300 (88 leftover),
+//           500 (288 leftover), 600 (388 leftover). Best-Fit picks 300
+//           because it leaves the smallest remainder of 88."
+//      - Compare the "Free" column to what First-Fit left behind — point out
+//        the smaller remainders in Best-Fit's table.
+//      - Point out any very small leftover values (like 2 or 83) and say:
+//          "That 2-unit hole will never be used again — that is the small
+//           fragment problem Best-Fit is known for."
+//
+//   WHAT TO KNOW IF ASKED A QUESTION:
+//      - Does Best-Fit always satisfy more requests than First-Fit?
+//        Not necessarily — it depends on the input. In this demo they tie.
+//        But Best-Fit's tiny fragments can actually cause MORE rejections
+//        over a longer sequence of processes.
+//      - When is Best-Fit preferred?
+//        When process sizes are predictable and similar, so you can plan
+//        partition usage tightly with minimal waste per slot.
 //
 // =============================================================================
 
 bool bestFitAllocate(vector<Partition>& partitions,
                      const string& name, int size) {
-    // Scan ALL partitions; pick the SMALLEST one that still fits
+    // Scan ALL partitions; pick the SMALLEST one that still fits the process.
     int bestIndex     = -1;
     int bestRemaining = INT_MAX;
 
     for (int i = 0; i < (int)partitions.size(); i++) {
-        Partition& p = partitions[i];
-        if (p.process.empty() && p.remaining >= size) {
-            if (p.remaining < bestRemaining) {
-                bestRemaining = p.remaining;
+        if (partitions[i].process.empty() && partitions[i].remaining >= size) {
+            if (partitions[i].remaining < bestRemaining) {
+                bestRemaining = partitions[i].remaining;
                 bestIndex     = i;
             }
         }
@@ -291,14 +364,14 @@ bool bestFitAllocate(vector<Partition>& partitions,
 
 vector<Partition> albertBestFit(const vector<int>& partitionSizes,
                                 const vector<Process>& processes) {
-    printHeader("ALBERT TRAN - Best-Fit Memory Allocation");
+    printHeader("SECTION 3 - ALBERT TRAN: Best-Fit Memory Allocation");
 
     cout << R"(
   BEST-FIT ALGORITHM:
-    Scans ALL memory partitions before deciding.
+    Scans ALL partitions before making a decision.
     Allocates the process to the SMALLEST partition that still fits.
-    Trade-off: wastes less space per allocation, but leaves tiny fragments
-    that are often too small to be useful for future processes.
+    Minimizes wasted space per allocation -- but requires a full scan each time.
+    Known problem: leaves tiny leftover fragments that are too small to reuse.
 )";
 
     vector<Partition> partitions = initializePartitions(partitionSizes);
@@ -306,15 +379,17 @@ vector<Partition> albertBestFit(const vector<int>& partitionSizes,
 
     for (const Process& proc : processes) {
         cout << "\n  >> Allocating " << proc.name
-             << " (size=" << proc.size << ")\n";
+             << " (needs " << proc.size << " units)\n";
+        cout << "     Scanning all partitions for the smallest fit...\n";
 
         if (bestFitAllocate(partitions, proc.name, proc.size)) {
             satisfied.push_back(proc.name);
-            cout << "     SATISFIED -- " << proc.name << " placed using Best-Fit\n";
+            cout << "     SATISFIED -- " << proc.name
+                 << " placed in the smallest fitting partition (Best-Fit)\n";
         } else {
             rejected.push_back(proc.name);
-            cout << "     REJECTED  -- no partition has enough space for "
-                 << proc.name << " (size=" << proc.size << ")\n";
+            cout << "     REJECTED  -- no partition has " << proc.size
+                 << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "Best-Fit");
     }
@@ -326,44 +401,69 @@ vector<Partition> albertBestFit(const vector<int>& partitionSizes,
 
 
 // =============================================================================
-// JOSHUA DUENAS — Worst-Fit Algorithm & Comparison
+// SECTION 4 — JOSHUA DUENAS
+// Topic: Worst-Fit Allocation & Algorithm Comparison
 // =============================================================================
 //
-// JOSHUA: Your section handles:
-//   1. Running the Worst-Fit allocation algorithm
-//   2. Explaining the rationale for choosing the LARGEST partition
-//   3. Running the full side-by-side comparison across all three algorithms
+// WHAT YOU ARE RESPONSIBLE FOR PRESENTING:
 //
-// HOW TO USE IN YOUR DEMO:
-//   - After Worst-Fit runs, the comparison table prints automatically
-//   - Point out that Worst-Fit leaves big leftovers -- useful when future
-//     processes are expected to be large
-//   - In the comparison highlight fragmentation differences visually
+//   A) VERBAL EXPLANATION — Worst-Fit (say this before the simulation):
+//      - Explain the Worst-Fit strategy:
+//          "Worst-Fit is the opposite of Best-Fit. It also scans every
+//           partition, but instead of picking the smallest fit, it picks
+//           the LARGEST available partition every time."
+//      - Why would anyone do this? The reasoning is:
+//          "If we always use the biggest partition, we leave behind the
+//           biggest possible remainder. A big remainder is more likely to
+//           fit a future large process than a tiny leftover fragment."
+//      - When does this logic hold? When incoming processes are large and
+//        varied in size. Worst-Fit avoids the tiny-fragment problem of Best-Fit.
+//      - When does it fail? On uniform or small-process workloads, using the
+//        biggest partition every time can exhaust large partitions quickly,
+//        leaving no room for genuinely large future processes.
 //
-// TALKING POINTS -- Worst-Fit rationale:
-//   - Intentionally picks the LARGEST partition
-//   - Leaves a large remainder that can still fit future big processes
-//   - Better than Best-Fit when process sizes vary widely
-//   - Performs poorly when partition sizes are uniform
+//   B) RUNNING THE DEMO (select option 4 from the menu):
+//      - Use the SAME inputs as the other two demos.
+//      - Narrate each decision:
+//          "P1 needs 212 units. The largest available partition is 600.
+//           Worst-Fit picks it and leaves 388 units — a big remainder."
+//      - After each step, note the "Free" values are larger than Best-Fit's.
+//      - When REJECTED appears, explain:
+//          "Even though large partitions exist, they have been partially used
+//           and no single partition has enough contiguous space left."
 //
-// COMPARISON TALKING POINTS:
-//   - First-Fit : fastest, moderate fragmentation at the front
-//   - Best-Fit  : smallest holes, but most tiny unusable fragments
-//   - Worst-Fit : large holes remain, good for varied workloads
+//   C) COMPARISON (runs automatically after Worst-Fit):
+//      - Walk through the comparison table line by line:
+//          - "Allocated" shows how many processes each algorithm placed.
+//          - "Int. Frag" is the total wasted space inside used partitions.
+//            Lower is better — Best-Fit wins here.
+//          - "Free Space" is space in partitions that were never touched.
+//      - Summarize: "No algorithm is universally best. First-Fit is fastest,
+//        Best-Fit wastes the least per slot, and Worst-Fit preserves large
+//        blocks for future big processes. The right choice depends on the
+//        expected workload."
+//
+//   WHAT TO KNOW IF ASKED A QUESTION:
+//      - Why does Worst-Fit sometimes satisfy fewer requests?
+//        It burns through the large partitions early, leaving only small
+//        ones that cannot fit medium or large processes later.
+//      - What is external vs internal fragmentation?
+//        Internal — wasted space INSIDE an allocated partition (shown here).
+//        External — free space spread across many partitions that cannot be
+//        combined to serve a large request (also visible in these demos).
 //
 // =============================================================================
 
 bool worstFitAllocate(vector<Partition>& partitions,
                       const string& name, int size) {
-    // Scan ALL partitions; pick the LARGEST one available
+    // Scan ALL partitions; pick the LARGEST one available.
     int worstIndex     = -1;
     int worstRemaining = -1;
 
     for (int i = 0; i < (int)partitions.size(); i++) {
-        Partition& p = partitions[i];
-        if (p.process.empty() && p.remaining >= size) {
-            if (p.remaining > worstRemaining) {
-                worstRemaining = p.remaining;
+        if (partitions[i].process.empty() && partitions[i].remaining >= size) {
+            if (partitions[i].remaining > worstRemaining) {
+                worstRemaining = partitions[i].remaining;
                 worstIndex     = i;
             }
         }
@@ -379,15 +479,14 @@ bool worstFitAllocate(vector<Partition>& partitions,
 
 vector<Partition> joshuaWorstFit(const vector<int>& partitionSizes,
                                  const vector<Process>& processes) {
-    printHeader("JOSHUA DUENAS - Worst-Fit Memory Allocation");
+    printHeader("SECTION 4 - JOSHUA DUENAS: Worst-Fit Memory Allocation");
 
     cout << R"(
   WORST-FIT ALGORITHM:
-    Scans ALL memory partitions before deciding.
+    Scans ALL partitions before making a decision.
     Allocates the process to the LARGEST available partition.
-    Intentionally leaves the biggest possible remainder.
-    Useful when future processes are expected to be large --
-    larger leftovers are more likely to accommodate them.
+    Intentionally leaves the biggest possible remainder for future processes.
+    Useful when future requests are expected to be large and varied.
 )";
 
     vector<Partition> partitions = initializePartitions(partitionSizes);
@@ -395,15 +494,17 @@ vector<Partition> joshuaWorstFit(const vector<int>& partitionSizes,
 
     for (const Process& proc : processes) {
         cout << "\n  >> Allocating " << proc.name
-             << " (size=" << proc.size << ")\n";
+             << " (needs " << proc.size << " units)\n";
+        cout << "     Scanning all partitions for the largest available...\n";
 
         if (worstFitAllocate(partitions, proc.name, proc.size)) {
             satisfied.push_back(proc.name);
-            cout << "     SATISFIED -- " << proc.name << " placed using Worst-Fit\n";
+            cout << "     SATISFIED -- " << proc.name
+                 << " placed in the largest available partition (Worst-Fit)\n";
         } else {
             rejected.push_back(proc.name);
-            cout << "     REJECTED  -- no partition has enough space for "
-                 << proc.name << " (size=" << proc.size << ")\n";
+            cout << "     REJECTED  -- no partition has " << proc.size
+                 << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "Worst-Fit");
     }
@@ -413,15 +514,16 @@ vector<Partition> joshuaWorstFit(const vector<int>& partitionSizes,
     return partitions;
 }
 
+// Comparison table — called by Joshua after Worst-Fit completes.
 void joshuaComparison(const vector<Partition>& ffPartitions,
                       const vector<Partition>& bfPartitions,
                       const vector<Partition>& wfPartitions) {
-    printHeader("JOSHUA DUENAS - Algorithm Comparison & Fragmentation Analysis");
+    printHeader("SECTION 4 (cont.) - JOSHUA DUENAS: Algorithm Comparison");
 
     cout << R"(
   SIDE-BY-SIDE COMPARISON
   Internal fragmentation = wasted space inside allocated (used) partitions
-  Free space             = space in partitions that were never allocated
+  Free space             = space remaining in partitions never assigned
 )";
 
     auto fragStats = [](const vector<Partition>& parts,
@@ -464,32 +566,48 @@ void joshuaComparison(const vector<Partition>& ffPartitions,
 
     cout << R"(
   ANALYSIS:
-    First-Fit  -- Fast allocation, moderate fragmentation near the front.
-                  Good general-purpose choice for most workloads.
+    First-Fit  -- Fastest (stops at first fit). Moderate fragmentation
+                  concentrated near the front of memory.
 
-    Best-Fit   -- Minimizes wasted space per allocation.
-                  Produces the most tiny unusable fragments over time.
-                  Slower due to full scan on every allocation.
+    Best-Fit   -- Least wasted space per allocation. Slowest (full scan
+                  every time). Produces the most tiny unusable fragments.
 
-    Worst-Fit  -- Leaves the largest remainders after allocation.
-                  Best when incoming processes tend to be large and varied.
-                  Performs poorly on uniform workloads.
+    Worst-Fit  -- Preserves large contiguous blocks for future requests.
+                  Performs poorly when all partitions are similar in size.
 
   CONCLUSION:
-    No single algorithm is universally best.
-    The right choice depends on process size distribution and system needs.
+    No algorithm is universally best. The right choice depends on whether
+    speed, low fragmentation, or handling large future requests matters most.
 )";
 }
 
 
 // =============================================================================
-// MAIN — Entry Point
-// Runs all four sections in order: Rolando -> Leonardo -> Albert -> Joshua
+// MENU
+// =============================================================================
+
+void printMenu() {
+    cout << "\n" << string(60, '=') << "\n";
+    cout << "  CPSC 351 -- Memory Allocation Simulation\n";
+    cout << string(60, '=') << "\n";
+    cout << "  Select a section to run:\n\n";
+    cout << "    1  (Rolando Perez)       -- Introduction & Memory Setup\n";
+    cout << "    2  (Leonardo Cristofaro) -- First-Fit Algorithm\n";
+    cout << "    3  (Albert Tran)         -- Best-Fit Algorithm\n";
+    cout << "    4  (Joshua Duenas)       -- Worst-Fit + Full Comparison\n";
+    cout << "    5                        -- Run All Sections in Order\n";
+    cout << "    0                        -- Exit\n\n";
+    cout << "  Enter choice: ";
+}
+
+
+// =============================================================================
+// MAIN
 // =============================================================================
 
 int main() {
     // -------------------------------------------------------------------------
-    // INPUT: Modify these values to change the demo scenario
+    // INPUT: Modify these values to change the demo scenario.
     // -------------------------------------------------------------------------
     vector<int> partitionSizes = {100, 500, 200, 300, 600};
 
@@ -504,18 +622,58 @@ int main() {
     };
     // -------------------------------------------------------------------------
 
-    // ROLANDO — Introduction & initial state display
-    rolandoIntro(partitionSizes, processes);
+    // Cache results so the comparison table in option 4 can use them even if
+    // only Worst-Fit is run fresh; fall back to running all three when needed.
+    vector<Partition> ffResult, bfResult, wfResult;
+    bool ffRan = false, bfRan = false, wfRan = false;
 
-    // LEONARDO — First-Fit demo
-    vector<Partition> ffResult = leonardoFirstFit(partitionSizes, processes);
+    int choice = -1;
+    while (choice != 0) {
+        printMenu();
+        cin >> choice;
 
-    // ALBERT — Best-Fit demo (same inputs)
-    vector<Partition> bfResult = albertBestFit(partitionSizes, processes);
+        switch (choice) {
+            case 1:
+                rolandoIntro(partitionSizes, processes);
+                break;
 
-    // JOSHUA — Worst-Fit demo + final comparison
-    vector<Partition> wfResult = joshuaWorstFit(partitionSizes, processes);
-    joshuaComparison(ffResult, bfResult, wfResult);
+            case 2:
+                ffResult = leonardoFirstFit(partitionSizes, processes);
+                ffRan    = true;
+                break;
+
+            case 3:
+                bfResult = albertBestFit(partitionSizes, processes);
+                bfRan    = true;
+                break;
+
+            case 4:
+                // Run all three algorithms if any haven't been run yet,
+                // so the comparison table always has complete data.
+                if (!ffRan) { ffResult = leonardoFirstFit(partitionSizes, processes); ffRan = true; }
+                if (!bfRan) { bfResult = albertBestFit(partitionSizes, processes);    bfRan = true; }
+                wfResult = joshuaWorstFit(partitionSizes, processes);
+                wfRan    = true;
+                joshuaComparison(ffResult, bfResult, wfResult);
+                break;
+
+            case 5:
+                rolandoIntro(partitionSizes, processes);
+                ffResult = leonardoFirstFit(partitionSizes, processes); ffRan = true;
+                bfResult = albertBestFit(partitionSizes, processes);    bfRan = true;
+                wfResult = joshuaWorstFit(partitionSizes, processes);   wfRan = true;
+                joshuaComparison(ffResult, bfResult, wfResult);
+                break;
+
+            case 0:
+                cout << "\n  Exiting simulation. Good luck on the presentation!\n\n";
+                break;
+
+            default:
+                cout << "\n  Invalid choice. Please enter 0-5.\n";
+                break;
+        }
+    }
 
     return 0;
 }
