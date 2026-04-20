@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <climits>
+#include <limits>
 
 using namespace std;
 
@@ -116,7 +117,6 @@ void calculateFragmentation(const vector<Partition>& partitions, const string& l
 // Pauses output until the presenter presses Enter — use between steps during live demo.
 void pressEnterToContinue() {
     cout << "\n  [Press ENTER to continue...]\n";
-    cin.ignore();
     cin.get();
 }
 
@@ -197,6 +197,7 @@ void rolandoIntro(const vector<int>& partitionSizes, const vector<Process>& proc
     - Process sizes   = how much memory each process requests
     - REJECTED        = printed when no partition can fit the process
 )";
+    pressEnterToContinue();
 }
 
 
@@ -284,6 +285,7 @@ vector<Partition> leonardoFirstFit(const vector<int>& partitionSizes,
                  << proc.size << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "First-Fit");
+        pressEnterToContinue();
     }
 
     printResultSummary(satisfied, rejected, "First-Fit");
@@ -392,6 +394,7 @@ vector<Partition> albertBestFit(const vector<int>& partitionSizes,
                  << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "Best-Fit");
+        pressEnterToContinue();
     }
 
     printResultSummary(satisfied, rejected, "Best-Fit");
@@ -507,6 +510,7 @@ vector<Partition> joshuaWorstFit(const vector<int>& partitionSizes,
                  << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "Worst-Fit");
+        pressEnterToContinue();
     }
 
     printResultSummary(satisfied, rejected, "Worst-Fit");
@@ -631,6 +635,7 @@ int main() {
     while (choice != 0) {
         printMenu();
         cin >> choice;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         switch (choice) {
             case 1:
