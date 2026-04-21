@@ -270,7 +270,8 @@ vector<Partition> leonardoFirstFit(const vector<int>& partitionSizes,
     vector<Partition> partitions = initializePartitions(partitionSizes);
     vector<string> satisfied, rejected;
 
-    for (const Process& proc : processes) {
+    for (int i = 0; i < (int)processes.size(); i++) {
+        const Process& proc = processes[i];
         cout << "\n  >> Allocating " << proc.name
              << " (needs " << proc.size << " units)\n";
         cout << "     Scanning from partition 1...\n";
@@ -285,6 +286,9 @@ vector<Partition> leonardoFirstFit(const vector<int>& partitionSizes,
                  << proc.size << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "First-Fit");
+        if (i + 1 < (int)processes.size())
+            cout << "\n  Next: " << processes[i+1].name
+                 << " needs " << processes[i+1].size << " units\n";
         pressEnterToContinue();
     }
 
@@ -379,7 +383,8 @@ vector<Partition> albertBestFit(const vector<int>& partitionSizes,
     vector<Partition> partitions = initializePartitions(partitionSizes);
     vector<string> satisfied, rejected;
 
-    for (const Process& proc : processes) {
+    for (int i = 0; i < (int)processes.size(); i++) {
+        const Process& proc = processes[i];
         cout << "\n  >> Allocating " << proc.name
              << " (needs " << proc.size << " units)\n";
         cout << "     Scanning all partitions for the smallest fit...\n";
@@ -394,6 +399,9 @@ vector<Partition> albertBestFit(const vector<int>& partitionSizes,
                  << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "Best-Fit");
+        if (i + 1 < (int)processes.size())
+            cout << "\n  Next: " << processes[i+1].name
+                 << " needs " << processes[i+1].size << " units\n";
         pressEnterToContinue();
     }
 
@@ -495,7 +503,8 @@ vector<Partition> joshuaWorstFit(const vector<int>& partitionSizes,
     vector<Partition> partitions = initializePartitions(partitionSizes);
     vector<string> satisfied, rejected;
 
-    for (const Process& proc : processes) {
+    for (int i = 0; i < (int)processes.size(); i++) {
+        const Process& proc = processes[i];
         cout << "\n  >> Allocating " << proc.name
              << " (needs " << proc.size << " units)\n";
         cout << "     Scanning all partitions for the largest available...\n";
@@ -510,6 +519,9 @@ vector<Partition> joshuaWorstFit(const vector<int>& partitionSizes,
                  << " units free for " << proc.name << "\n";
         }
         displayMemoryState(partitions, "Worst-Fit");
+        if (i + 1 < (int)processes.size())
+            cout << "\n  Next: " << processes[i+1].name
+                 << " needs " << processes[i+1].size << " units\n";
         pressEnterToContinue();
     }
 
